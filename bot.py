@@ -4,7 +4,6 @@ import binascii
 import json
 import logging
 import os
-from io import BytesIO
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart
@@ -37,7 +36,7 @@ async def start_handler(message: Message, bot: Bot) -> None:
 
 
 @dp.message(F.web_app_data)
-async def web_app_data_handler(message: Message) -> None:
+async def web_app_data_handler(message: Message, bot: Bot) -> None:
     raw_data = message.web_app_data.data
 
     try:
@@ -51,8 +50,10 @@ async def web_app_data_handler(message: Message) -> None:
         await message.answer("Ошибка: поле 'photos' отсутствует или пустое.")
         return
 
+    user_id = message.from_user.id if message.from_user else message.chat.id
+
     sent_count = 0
-    for index, photo_base64 in enumerate(photos, start=1):
+    for index, photo_base64 in enumerate(photos):
         if not isinstance(photo_base64, str):
             continue
 
@@ -63,15 +64,19 @@ async def web_app_data_handler(message: Message) -> None:
         try:
             photo_bytes = base64.b64decode(cleaned, validate=True)
         except (binascii.Error, ValueError):
-            await message.answer(f"Фото #{index}: некорректный base64.")
+            await message.answer(f"Фото #{index + 1}: некорректный base64.")
             continue
 
         if not photo_bytes:
-            await message.answer(f"Фото #{index}: пустые данные.")
+            await message.answer(f"Фото #{index + 1}: пустые данные.")
             continue
 
-        photo_file = BufferedInputFile(BytesIO(photo_bytes), filename=f"photo_{index}.jpg")
-        await message.answer_photo(photo=photo_file)
+        photo_file = BufferedInputFile(
+            photo_bytes, filename=f"photo_{index + 1}.jpg"
+        )
+        await bot.send_document(
+            chat_id=user_id, document=photo_file
+        )
         sent_count += 1
 
     if sent_count == 0:
