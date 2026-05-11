@@ -70,7 +70,7 @@ async def web_app_data_handler(message: Message) -> None:
             await message.answer(f"Фото #{index}: пустые данные.")
             continue
 
-        photo_file = BufferedInputFile(photo_bytes, filename=f"photo_{index}.jpg")
+        photo_file = BufferedInputFile(BytesIO(photo_bytes), filename=f"photo_{index}.jpg")
         await message.answer_photo(photo=photo_file)
         sent_count += 1
 
